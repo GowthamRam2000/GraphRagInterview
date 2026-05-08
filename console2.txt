@@ -1,5 +1,0 @@
-Total messages: 3 (Errors: 0, Warnings: 0)
-
-[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
-[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
-[LOG] [Ontology] loaded for doc_6732030c750c4d8a 4 objects 3 rels @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477

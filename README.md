@@ -1,260 +1,370 @@
-# CognizInterview Graph RAG Chatbot
+# CognizInterview Graph RAG
 
-Upload-first Graph RAG chatbot for long PDF documents. Users upload PDFs, the backend ingests them page-by-page, extracts a dynamic ontology, stores graph/evidence data in Neo4j, and answers questions with citations, graph paths, skills-based formatting, and explainable traces.
+A production-minded Graph RAG chatbot that answers questions about uploaded PDFs with citations, ontology graphs, and explainable traces.
 
-## Phase 0 Local Setup
+Built by Gowtham Ram M for the Cognizant interview process.
 
-Prerequisites:
+---
 
-- Python 3.13+
-- uv
-- Node.js 24+
-- pnpm 10+
-- Docker Desktop or compatible Docker runtime for fully local Postgres/Neo4j, or live GCP/Neo4j credentials for the cloud-backed demo
+## What This Is
 
-Install backend dependencies:
+This is a working document intelligence system that ingests long PDFs, builds a dynamic knowledge graph, and answers questions with traceable evidence. Every answer links back to specific pages, evidence spans, graph paths, and model reasoning.
 
-```bash
-uv sync --project apps/backend --all-groups
+The system is designed so that a reviewer can inspect how an answer was produced without reading the code first.
+
+---
+
+## The Architecture At a Glance
+
+```
+PDF Upload
+    |
+    v
+LlamaParse Agentic  ----->  Page-level text + tables + layout
+    |
+    v
+Dynamic Ontology Extraction  ----->  Entities, Relationships, Evidence Spans
+    |
+    v
+Cloud SQL (state)  +  Neo4j (graph)  +  GCS (raw PDFs)
+    |
+    v
+User Question  ----->  Router  ----->  Retrieval  ----->  Reranking  ----->  Graph Paths  ----->  Answer Generation
+    |
+    v
+Explainable Trace (every step recorded, scored, and inspectable)
 ```
 
-Install frontend dependencies:
+---
+
+## How the Pipeline Works
+
+### 1. Document Ingestion
+
+When a PDF is uploaded, the backend runs a multi-stage extraction:
+
+**LlamaParse Agentic** parses the PDF with layout awareness. It understands headers, tables, columns, and page structure. The result is clean, structured markdown per page.
+
+**Ontology Extraction** then scans each page and identifies:
+- **Entities** (e.g., "AI RMF", "NIST", "Govern", "Map")
+- **Object types** (e.g., Document, Page, EvidenceSpan, Entity, Table)
+- **Relationships** (e.g., "Table RELATED_TO Contents", "Page HAS_EVIDENCE EvidenceSpan")
+- **Evidence spans** (text chunks with semantic meaning)
+
+This is not a fixed schema. The ontology is extracted dynamically per document. A 48-page NIST AI Risk Management Framework document will produce different entity types and relationships than a 22-page technical project proposal.
+
+**Storage strategy:**
+- **Cloud SQL** stores documents, pages, traces, skills, and retrieval state
+- **Neo4j** stores the graph of entities and relationships
+- **Google Cloud Storage** stores the original PDF and extracted page artifacts
+- **Vertex AI** (or Gemini API) stores embeddings for semantic search
+
+### 2. Question Routing
+
+When a user asks a question, the system first decides which "route" to take:
+
+| Route | When it is used | What happens |
+|-------|----------------|--------------|
+| `greeting` | User says "hello" or "thanks" | Returns a polite greeting, no retrieval |
+| `graph_rag` | Normal question about document content | Full pipeline: retrieve, rerank, graph paths, answer |
+| `ontology` | "What entities are in the document?" | Returns ontology summary instead of a narrative answer |
+| `skill_management` | "What skills are available?" | Returns skill definitions |
+| `fallback` / `out_of_scope` | Question is off-topic | Returns a fallback message with best-effort retrieval |
+
+The router is a lightweight OpenAI model call (`gpt-5.4-mini`) with a prompt that includes the question and a few document metadata hints. It runs in ~50ms and determines the rest of the pipeline.
+
+### 3. Retrieval
+
+For `graph_rag` questions, the system retrieves evidence in two stages:
+
+**Stage 1: Hybrid Retrieval**
+- **Semantic search**: The question is embedded with Gemini Embedding 2. The system finds pages whose evidence spans have the closest cosine similarity.
+- **Lexical (BM25) search**: The question is tokenized and matched against page text using inverted-index keyword search.
+
+These two lists are merged and scored using a weighted combination: `combined_score = 0.7 * semantic_score + 0.3 * lexical_score`.
+
+**Stage 2: Vertex Reranking**
+
+The top ~40 hybrid candidates are sent to Google's Vertex Agent Search Ranking API (`semantic-ranker-default-004`). This re-scores every candidate using a cross-attention model that compares the question directly against the candidate text. The result is a more accurate `final_score`.
+
+The reranked top-8 evidence spans are selected for answer generation.
+
+### 4. Graph Path Expansion
+
+After retrieval, the system queries Neo4j for graph paths that connect the retrieved entities. For example, if the question mentions "AI RMF core functions" and the retriever found a "Govern" entity on page 5, the graph query might discover:
+
+```
+Page(5) -> HAS_EVIDENCE -> EvidenceSpan(12) -> MENTIONS -> Entity("Govern")
+Entity("Govern") -> RELATED_TO -> Entity("Map")
+Entity("Map") -> MENTIONS -> EvidenceSpan(15)
+```
+
+These graph paths are returned alongside the answer as additional context. They help the model understand entity relationships that span multiple pages.
+
+### 5. Answer Generation
+
+The answer synthesizer receives:
+1. The user's question
+2. The top-8 reranked evidence spans (with text, page numbers, scores)
+3. The graph paths connecting entities
+4. The selected skill format (if any)
+
+It constructs a prompt that grounds the answer in the evidence. The prompt looks like:
+
+```
+Answer the user's question using ONLY the provided evidence below.
+If the evidence does not contain the answer, say so.
+
+Evidence:
+[1] Page 5: "The GOVERN function establishes..."
+[2] Page 12: "The MAP function builds..."
+...
+
+Graph paths:
+Page(5) -> Govern -> Map -> Measure -> Manage
+
+Question: What are the four core functions?
+```
+
+The model (`gpt-5.4-mini` or `gpt-5.4`) generates the answer. The system then:
+- Extracts citations automatically (the model is instructed to cite evidence numbers)
+- Formats the output according to the selected skill (see Skills below)
+- Records token usage, latency, and model calls in the trace
+
+### 6. Tracing Every Answer
+
+Every answer produces a `TraceDetail` object with:
+
+| Field | What's in it |
+|-------|-------------|
+| `user_message` | The original question |
+| `answer` | The final generated text |
+| `route` | Which route was taken (graph_rag, greeting, etc.) |
+| `retrieval` | Full list of evidence candidates with semantic, lexical, rerank, and final scores |
+| `evidence` | Evidence spans used in the answer |
+| `graph_paths` | Neo4j relationship paths discovered |
+| `model_calls` | Each LLM call with model name, tokens, purpose |
+| `usage` | Total tokens, cached tokens, estimated latency |
+| `timings` | Duration of each pipeline step (retrieval, reranking, generation) |
+
+The frontend `/trace` page visualizes this as a LangSmith-style waterfall timeline:
+- Horizontal bars show each pipeline step's duration
+- Color-coded by operation type (retrieval = blue, reranking = amber, graph = violet, generation = emerald)
+- Click any bar to inspect its input, output, metadata, and errors
+
+---
+
+## Skills: Structured Answer Formats
+
+Skills are JSON templates that tell the answer generator how to format its response. Think of them as prompt-injected style guides.
+
+When a skill is selected, the answer prompt is extended with:
+- Required sections (e.g., Executive Summary, Key Findings, Recommendations)
+- Word limits per section
+- Citation requirements per section
+- Tone (executive, technical, audit, concise, cyber)
+
+### Built-in: McKinsey Executive (`mckinsey_executive`)
+
+Upload `mckinsey-skill.json` from the repo root. This skill forces answers into a **Situation-Complication-Resolution (SCR)** structure:
+
+1. **Executive Summary** — 80 words, no citations
+2. **Situation & Complication** — 120 words, citations required
+3. **Key Findings** — 200 words, citations required
+4. **So What?** — 100 words, insight focus
+5. **Recommendations** — 150 words, prioritized actions with citations
+6. **Implementation & Next Steps** — 120 words, execution roadmap
+
+**How to demo it:**
+1. Go to `/chat`
+2. Click **Upload JSON skill** and select `mckinsey-skill.json`
+3. Ask: *"How should AI systems be made secure and resilient?"*
+4. The answer will come back in McKinsey SCR format with footnote-style citations
+
+---
+
+## The Frontend
+
+The frontend is a Next.js 16 app with a premium Material 3 + Liquid Glass design:
+
+| Page | Purpose |
+|------|---------|
+| `/` | Product walkthrough with animated pipeline visualization |
+| `/chat` | Document upload, skill selection, streaming chat with citations |
+| `/trace` | LangSmith-style observability: waterfall timeline, retrieval scores, ontology, graph paths |
+| `/about` | Interview context and project background |
+
+### Design System
+- **Typography**: Google Sans Flex (variable font, crisp at small sizes)
+- **Color palette**: Teal/slate (`#0d9488` primary)
+- **Animations**: Framer Motion page transitions, staggered message entrances, micro-interactions on buttons
+- **Glass surfaces**: Backdrop-filter blur with subtle border highlights
+
+---
+
+## Local Setup
+
+### Prerequisites
+
+- Python 3.13+
+- `uv` (Python package manager)
+- Node.js 24+
+- `pnpm` 10+
+- Docker Desktop (for local Postgres + Neo4j)
+
+### Quick Start
+
+**1. Install dependencies**
 
 ```bash
+# Backend
+uv sync --project apps/backend --all-groups
+
+# Frontend
 pnpm install
 ```
 
-For a local-only sandbox, start local infrastructure:
+**2. Set up environment**
+
+```bash
+cp .env.example .env
+# Edit .env with your LlamaCloud, OpenAI, Gemini, Neo4j credentials
+```
+
+**3. Start local infrastructure**
 
 ```bash
 docker compose up -d postgres neo4j fake-gcs
 ```
 
-For the interview/demo path used in this repo, keep data in Cloud SQL/Neo4j and start the Cloud SQL Auth Proxy before Uvicorn:
-
-```bash
-./.bin/cloud-sql-proxy "$CLOUD_SQL_INSTANCE_CONNECTION_NAME" --port 5432
-```
-
-With that proxy running, `DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@127.0.0.1:5432/DB` writes to Cloud SQL, not to a local Postgres instance. In Cloud Run, do not expose Cloud SQL to end users; attach the Cloud SQL instance to the service and set `DATABASE_URL` to the Unix socket form from `DATABASE_URL_CLOUD_RUN`.
-
-Run backend:
+**4. Run backend**
 
 ```bash
 cd apps/backend
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Or, from the repository root:
-
-```bash
-uv run --project apps/backend uvicorn --app-dir apps/backend app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-Run frontend:
+**5. Run frontend**
 
 ```bash
 pnpm --filter @cognizinterview/frontend dev
 ```
 
-Open the UI at [http://127.0.0.1:3000](http://127.0.0.1:3000). The backend Swagger docs stay at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+Open:
+- Frontend: http://127.0.0.1:3000
+- Backend docs: http://127.0.0.1:8000/docs
 
-Frontend routes:
+### Cloud-Backed Local Demo
 
-- `/`: premium product walkthrough for the Graph RAG pipeline.
-- `/about`: interview-process context for Gowtham Ram M and Cognizant.
-- `/chat`: document upload, document selection, skill selection/upload, streaming chat, citations, and live answer trace.
-- `/trace`: trace log, retrieval scores, Vertex rerank diagnostics, ontology summary, graph paths, search preview, and smoke checks.
-
-## Workspace Layout
-
-- Backend app: `apps/backend`
-- Backend Python project file: `apps/backend/pyproject.toml`
-- Python environment: root `.venv`, managed by `uv`
-- Frontend app: `apps/frontend`
-- Frontend package: `apps/frontend/package.json`
-- JavaScript workspace dependencies: root `node_modules`, managed by `pnpm`
-- Shared environment file: root `.env`
-
-Do not create separate `.env` files inside `apps/backend` or `apps/frontend`. The backend loads the root `.env`, and frontend scripts load the same file with `dotenv -e ../../.env`.
-
-## Development Commands
-
-Backend checks:
+Instead of local Docker, use Cloud SQL + Neo4j AuraDB:
 
 ```bash
-uv run --project apps/backend pytest
-uv run --project apps/backend ruff check
-```
-
-Frontend checks:
-
-```bash
-pnpm --filter @cognizinterview/frontend test
-pnpm --filter @cognizinterview/frontend lint
-pnpm --filter @cognizinterview/frontend build
-```
-
-The frontend production build uses `next build --webpack` so it works reliably in local sandboxed and CI-like environments. The frontend dev server uses `next dev --turbopack`.
-
-## Agent And Operator Notes
-
-Use this section when another agent, interviewer, or local operator needs to run the project without rediscovering the layout.
-
-Cloud Run deployment for the one-week demo is documented in [Cloud Run One-Week Demo Deployment](docs/cloud-run-week-demo.md). The deploy path reads root `.env`, stores secrets in Secret Manager, generates Cloud Run env files, deploys backend/frontend, and redeploys backend with exact frontend CORS.
-
-### Important paths
-
-- Repository root: `/Users/gowthamram/PycharmProjects/CognizInterview`
-- Root env file: `/Users/gowthamram/PycharmProjects/CognizInterview/.env`
-- Backend app: `/Users/gowthamram/PycharmProjects/CognizInterview/apps/backend`
-- Backend entrypoint: `apps/backend/app/main.py`
-- Backend routes: `apps/backend/app/api`
-- Backend RAG layer: `apps/backend/app/rag`
-- Backend tests: `apps/backend/tests`
-- Frontend app: `/Users/gowthamram/PycharmProjects/CognizInterview/apps/frontend`
-- Frontend chat workspace: `apps/frontend/src/components/ChatWorkspace.tsx`
-- Frontend API client: `apps/frontend/src/lib/api.ts`
-- Frontend tests: `apps/frontend/src/**/*.test.tsx` and `apps/frontend/src/**/*.test.ts`
-- Cloud SQL Auth Proxy binary: `.bin/cloud-sql-proxy`
-- Demo PDF: `NIST.AI.100-1.pdf`
-
-### Dependency locations
-
-- Python dependencies are managed by `uv` from `apps/backend/pyproject.toml`.
-- The Python virtual environment is the root `.venv`.
-- JavaScript dependencies are managed by `pnpm`.
-- The JavaScript workspace uses the root `node_modules`; do not create a nested `node_modules` manually.
-- Backend and frontend both read the root `.env`; do not create separate env files under `apps/backend` or `apps/frontend`.
-
-### Required local terminals
-
-Open three terminals from the repository root for the cloud-backed local demo.
-
-Terminal 1, Cloud SQL Auth Proxy:
-
-```bash
-cd /Users/gowthamram/PycharmProjects/CognizInterview
-set -a
-source .env
-set +a
+# Terminal 1: Cloud SQL proxy
 ./.bin/cloud-sql-proxy "$CLOUD_SQL_INSTANCE_CONNECTION_NAME" --port 5432
-```
 
-Terminal 2, FastAPI backend:
-
-```bash
-cd /Users/gowthamram/PycharmProjects/CognizInterview
+# Terminal 2: Backend
 uv run --project apps/backend uvicorn --app-dir apps/backend app.main:app --host 127.0.0.1 --port 8000 --reload
-```
 
-Terminal 3, Next.js frontend:
-
-```bash
-cd /Users/gowthamram/PycharmProjects/CognizInterview
+# Terminal 3: Frontend
 pnpm --dir apps/frontend dev
 ```
 
-Open:
+---
 
-- Frontend: [http://127.0.0.1:3000](http://127.0.0.1:3000)
-- Chat workspace: [http://127.0.0.1:3000/chat](http://127.0.0.1:3000/chat)
-- Trace UI: [http://127.0.0.1:3000/trace](http://127.0.0.1:3000/trace)
-- Backend docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+## Project Structure
 
-### Auth and endpoint access
-
-All `/v1/*` backend endpoints require the API key from `.env`:
-
-```bash
-set -a
-source .env
-set +a
-curl -H "x-api-key: $API_AUTH_KEY" http://127.0.0.1:8000/v1/documents
+```
+CognizInterview/
+├── apps/
+│   ├── backend/           # FastAPI application
+│   │   ├── app/
+│   │   │   ├── api/       # REST endpoints (chat, docs, ontology, traces, skills)
+│   │   │   ├── core/      # Config, auth, tracing middleware
+│   │   │   ├── rag/       # Router, answerer, prompts, model policy, usage tracking
+│   │   │   └── services/  # Embeddings, parsing, retrieval, reranking, Neo4j, skills
+│   │   └── tests/
+│   └── frontend/          # Next.js 16 application
+│       ├── src/
+│       │   ├── app/       # Routes (/, /chat, /trace, /about)
+│       │   ├── components/# ChatWorkspace, TraceExplorer, TraceWaterfall, etc.
+│       │   └── lib/       # API client, types, streaming helpers
+│       └── package.json
+├── docs/                  # Backend endpoint tests, deployment guides, roadmap
+├── deploy/                # Cloud Run deployment configs
+├── infra/                 # Terraform infrastructure
+├── mckinsey-skill.json    # Example skill template
+└── .env.example           # Environment template
 ```
 
-Swagger docs also require the same key. In `/docs`, click **Authorize** and enter the `API_AUTH_KEY` value.
+---
 
-The frontend uses `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_DEMO_API_KEY` from the same root `.env`. For local demo mode, `NEXT_PUBLIC_DEMO_API_KEY` must match `API_AUTH_KEY`.
+## Verification
 
-### Smoke tests
-
-Run these after the three terminals are up:
-
+**Backend:**
 ```bash
-curl http://127.0.0.1:8000/healthz
-curl -H "x-api-key: $API_AUTH_KEY" http://127.0.0.1:8000/v1/documents
-curl -H "x-api-key: $API_AUTH_KEY" http://127.0.0.1:8000/v1/traces/admin/smoke
-```
-
-Streaming chat smoke, replacing the document id if needed:
-
-```bash
-curl --no-buffer \
-  -H "x-api-key: $API_AUTH_KEY" \
-  -H "Content-Type: application/json" \
-  -X POST http://127.0.0.1:8000/v1/chat/stream \
-  -d '{"document_id":"doc_3183e20e5d1245ec","message":"What are the four core functions in the AI Risk Management Framework?"}'
-```
-
-Expected stream shape:
-
-```text
-event: progress
-event: route
-event: citation
-event: answer_delta
-event: metrics
-event: trace
-event: done
-```
-
-### Verification commands
-
-Backend:
-
-```bash
-uv run --project apps/backend ruff check
 uv run --project apps/backend pytest
+uv run --project apps/backend ruff check
 ```
 
-Frontend:
-
+**Frontend:**
 ```bash
 pnpm --dir apps/frontend lint
 pnpm --dir apps/frontend test
 pnpm --dir apps/frontend build
 ```
 
-### Common gotchas
+**Smoke tests (with terminals running):**
+```bash
+# Health
+curl http://127.0.0.1:8000/healthz
 
-- If backend startup says port `8000` is in use, another Uvicorn process is already running.
-- If frontend startup says port `3000` is in use, another Next.js process is already running.
-- If database calls fail locally, check that the Cloud SQL proxy is running on `127.0.0.1:5432`.
-- If protected endpoints return `Missing or invalid API key`, use the `x-api-key` header and confirm `NEXT_PUBLIC_DEMO_API_KEY` matches `API_AUTH_KEY`.
-- Do not print or commit real `.env` secrets.
+# Documents list
+curl -H "x-api-key: $API_AUTH_KEY" http://127.0.0.1:8000/v1/documents
 
-## Demo Flow
-
-1. Start the backend and frontend with the commands above.
-2. Upload a PDF from the left panel. The current backend uses LlamaParse with `LLAMAPARSE_TIER=agentic` and stores parsed page text, ontology objects, evidence, embeddings, and traces.
-3. Select the uploaded document once it appears in the document list.
-4. Ask sample questions such as:
-
-```text
-What are the core functions of the NIST AI Risk Management Framework?
-How should AI systems be made secure and resilient?
-What does the MEASURE function ask organizations to do?
+# Streaming chat
+curl --no-buffer \
+  -H "x-api-key: $API_AUTH_KEY" \
+  -H "Content-Type: application/json" \
+  -X POST http://127.0.0.1:8000/v1/chat/stream \
+  -d '{"document_id":"YOUR_DOC_ID","message":"What are the four core functions?"}'
 ```
 
-5. Create the built-in Cyber Brief skill from the Skills panel and ask a risk question with that skill selected. The response should switch into the skill-driven executive/risk/evidence format.
-6. Use the Ontology and Traces tabs to explain how the answer was produced: retrieved pages, evidence snippets, graph paths, citations, route decision, token estimates, and admin smoke status.
+Expected SSE events: `progress` → `route` → `citation` → `answer_delta` → `metrics` → `trace` → `done`
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS v4, Framer Motion, Lucide icons |
+| **Backend** | FastAPI, Python 3.13, Pydantic v2, SQLAlchemy (async), uv |
+| **Database** | Cloud SQL (PostgreSQL) for relational state, Neo4j for graph |
+| **Parsing** | LlamaParse Agentic (primary), LiteParse (fallback) |
+| **Embeddings** | Gemini Embedding 2 (Google AI Studio) |
+| **LLM** | OpenAI Responses API (`gpt-5.4-mini` for routing/answer, `gpt-5.4` for complex synthesis) |
+| **Reranking** | Vertex AI Agent Search Ranking API (`semantic-ranker-default-004`) |
+| **Storage** | Google Cloud Storage (PDFs, artifacts) |
+| **Deployment** | Docker, Cloud Run, Terraform |
+
+---
+
+## What Makes This Different
+
+Most RAG demos stop at "upload a PDF and ask questions." This one goes further:
+
+1. **Explainability**: Every answer exposes its full reasoning chain — not just citations, but retrieval scores, reranker diagnostics, graph paths, token usage, and latency.
+2. **Dynamic ontology**: It does not rely on a fixed schema. Each document gets its own extracted entity-relationship graph.
+3. **Skill-based formatting**: Answers can be shaped into executive briefs, technical deep-dives, audit reports, or any custom format via JSON skills.
+4. **Production touches**: API auth, tracing, smoke tests, Cloud SQL + Neo4j persistence, and a deployment pipeline.
+
+---
 
 ## Environment
 
 Use only the root `.env`. Both backend and frontend scripts read from this file.
 
-Start by copying:
+Copy the example:
 
 ```bash
 cp .env.example .env
@@ -320,35 +430,8 @@ For a local demo that writes to Cloud SQL, start the Cloud SQL Auth Proxy before
 
 Then keep `STORE_BACKEND=sql`, `GRAPH_STORE_BACKEND=neo4j`, and `DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@127.0.0.1:5432/DB`. On Cloud Run, set `DATABASE_URL` to the Unix socket URL and attach the Cloud SQL instance to the service.
 
-## Parser Strategy
+---
 
-Phase 1 uses this parser order:
+## License
 
-1. LlamaParse through the active `llama-cloud` Python package when `LLAMA_CLOUD_API_KEY` is configured.
-2. LiteParse fallback through the `liteparse` Python package and `@llamaindex/liteparse` Node CLI when LlamaParse is unavailable.
-3. PyMuPDF/pdfplumber only as a low-level local extraction utility, not the primary parser path.
-
-The parser env values are:
-
-```env
-PARSER_PRIMARY=llamaparse
-PARSER_FALLBACK=liteparse
-LLAMA_CLOUD_API_KEY=
-LLAMAPARSE_TIER=agentic
-LLAMAPARSE_RESULT_TYPE=markdown
-LITEPARSE_OCR_ENABLED=false
-LITEPARSE_DPI=150
-```
-
-Use `API_AUTH_KEY=dev-local-auth-key` for local secured endpoint tests starting in Phase 1.
-
-## Backend RAG Layer
-
-Backend RAG code lives under `apps/backend/app/rag`:
-
-- `prompts.py`: versioned router, extractor, and answer prompt templates with evidence boundaries.
-- `model_policy.py`: `gpt-5.4-mini` routing/answer/extractor profiles and thinking vs no-thinking settings.
-- `answerer.py`: OpenAI Responses API answer synthesis with `prompt_cache_key`, fallback behavior, and model-call trace metadata.
-- `usage.py`: token usage, cached-token extraction, estimates, and latency helpers.
-
-Every Graph RAG trace now includes sanitized `prompts`, `model_calls`, `usage`, `timings`, and `cache` fields in addition to retrieval scores, evidence, graph paths, and citations.
+Built for the Cognizant interview process by Gowtham Ram M.
