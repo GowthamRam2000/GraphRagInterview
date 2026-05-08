@@ -1,0 +1,64 @@
+[project]
+name = "cognizinterview-backend"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+  "alembic",
+  "asyncpg",
+  "fastapi",
+  "google-genai",
+  "google-auth",
+  "google-cloud-logging",
+  "google-cloud-storage",
+  "google-cloud-trace",
+  "greenlet",
+  "httpx",
+  "langgraph",
+  "liteparse",
+  "llama-cloud",
+  "neo4j",
+  "neo4j-graphrag[google,openai]",
+  "openai",
+  "orjson",
+  "pdfplumber",
+  "psycopg[binary]",
+  "pydantic",
+  "pydantic-settings",
+  "pymupdf",
+  "pypdf",
+  "pyjwt[crypto]",
+  "python-multipart",
+  "pyyaml",
+  "sse-starlette",
+  "sqlalchemy",
+  "structlog",
+  "tenacity",
+  "uvicorn[standard]"
+]
+
+[dependency-groups]
+dev = [
+  "mypy",
+  "pytest",
+  "pytest-asyncio",
+  "respx",
+  "ruff",
+  "testcontainers[neo4j,postgres]"
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+plugins = ["pydantic.mypy"]

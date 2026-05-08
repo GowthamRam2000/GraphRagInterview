@@ -1,0 +1,20 @@
+substitutions:
+  _FRONTEND_IMAGE: "REGION-docker.pkg.dev/PROJECT/REPOSITORY/frontend:TAG"
+  _NEXT_PUBLIC_API_BASE_URL: "https://BACKEND_SERVICE_URL"
+  _NEXT_PUBLIC_DEMO_API_KEY: "replace-with-demo-api-key"
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-f"
+      - "apps/frontend/Dockerfile"
+      - "--build-arg"
+      - "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}"
+      - "--build-arg"
+      - "NEXT_PUBLIC_DEMO_API_KEY=${_NEXT_PUBLIC_DEMO_API_KEY}"
+      - "-t"
+      - "${_FRONTEND_IMAGE}"
+      - "."
+images:
+  - "${_FRONTEND_IMAGE}"

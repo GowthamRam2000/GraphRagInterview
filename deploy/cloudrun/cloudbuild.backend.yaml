@@ -1,0 +1,14 @@
+substitutions:
+  _BACKEND_IMAGE: "REGION-docker.pkg.dev/PROJECT/REPOSITORY/backend:TAG"
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-f"
+      - "apps/backend/Dockerfile"
+      - "-t"
+      - "${_BACKEND_IMAGE}"
+      - "."
+images:
+  - "${_BACKEND_IMAGE}"

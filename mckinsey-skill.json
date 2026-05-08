@@ -1,0 +1,41 @@
+{
+  "name": "mckinsey_executive",
+  "version": "1.0.0",
+  "description": "McKinsey-style executive response format. Delivers concise, hypothesis-driven answers with a Situation–Complication–Resolution (SCR) structure, clear 'so what' insights, and prioritized, actionable recommendations grounded in document evidence.",
+  "output_mode": "markdown",
+  "required_sections": [
+    {
+      "heading": "Executive Summary",
+      "max_words": 80,
+      "citation_required": false
+    },
+    {
+      "heading": "Situation & Complication",
+      "max_words": 120,
+      "citation_required": true
+    },
+    {
+      "heading": "Key Findings",
+      "max_words": 200,
+      "citation_required": true
+    },
+    {
+      "heading": "So What?",
+      "max_words": 100,
+      "citation_required": false
+    },
+    {
+      "heading": "Recommendations",
+      "max_words": 150,
+      "citation_required": true
+    },
+    {
+      "heading": "Implementation & Next Steps",
+      "max_words": 120,
+      "citation_required": false
+    }
+  ],
+  "tone": "executive",
+  "citation_style": "footnote",
+  "require_citations": true
+}

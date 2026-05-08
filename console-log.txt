@@ -1,0 +1,227 @@
+Total messages: 2 (Errors: 0, Warnings: 0)
+Returning 102 messages for level "info"
+
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3000/favicon.ico:0
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 370ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 39ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 134ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 34ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] ./apps/frontend/src/components/ChatWorkspace.tsx:522:18
+Expected '</', got 'jsx text'
+  520 |             {status}
+  521 |           </div>
+> 522 |         </header>
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 523 |
+      | ^
+> 524 |         {error ? (
+      | ^^^^^^^^
+  525 |           <div className="error-box">
+  526 |             <strong>{error}</strong>
+  527 |             <button onClick={() => ask()}>Retry</button>
+
+Parsing ecmascript source code failed
+
+Import trace:
+  Server Component:
+    ./apps/frontend/src/components/ChatWorkspace.tsx
+    ./apps/frontend/src/app/chat/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:3318
+[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/trace?_rsc=yGUejB_NhX1NABls:0
+[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/trace?_rsc=yGUejB_NhX1NABls:0
+[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/trace:0
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0a8t_react-dom_07.400g._.js:15305
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1226
+[ERROR] ./apps/frontend/src/components/ChatWorkspace.tsx:522:18
+Expected '</', got 'jsx text'
+  520 |             {status}
+  521 |           </div>
+> 522 |         </header>
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 523 |
+      | ^
+> 524 |         {error ? (
+      | ^^^^^^^^
+  525 |           <div className="error-box">
+  526 |             <strong>{error}</strong>
+  527 |             <button onClick={() => ask()}>Retry</button>
+
+Parsing ecmascript source code failed
+
+Import trace:
+  Server Component:
+    ./apps/frontend/src/components/ChatWorkspace.tsx
+    ./apps/frontend/src/app/chat/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1945
+[ERROR] ./apps/frontend/src/components/ChatWorkspace.tsx:522:18
+Expected '</', got 'jsx text'
+  520 |             {status}
+  521 |           </div>
+> 522 |         </header>
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 523 |
+      | ^
+> 524 |         {error ? (
+      | ^^^^^^^^
+  525 |           <div className="error-box">
+  526 |             <strong>{error}</strong>
+  527 |             <button onClick={() => ask()}>Retry</button>
+
+Parsing ecmascript source code failed
+
+Import trace:
+  Server Component:
+    ./apps/frontend/src/components/ChatWorkspace.tsx
+    ./apps/frontend/src/app/chat/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1945
+[ERROR] ./apps/frontend/src/components/ChatWorkspace.tsx:522:18
+Expected '</', got 'jsx text'
+  520 |             {status}
+  521 |           </div>
+> 522 |         </header>
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 523 |
+      | ^
+> 524 |         {error ? (
+      | ^^^^^^^^
+  525 |           <div className="error-box">
+  526 |             <strong>{error}</strong>
+  527 |             <button onClick={() => ask()}>Retry</button>
+
+Parsing ecmascript source code failed
+
+Import trace:
+  Server Component:
+    ./apps/frontend/src/components/ChatWorkspace.tsx
+    ./apps/frontend/src/app/chat/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1945
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1226
+[ERROR] ./apps/frontend/src/components/ChatWorkspace.tsx:522:18
+Expected '</', got 'jsx text'
+  520 |             {status}
+  521 |           </div>
+> 522 |         </header>
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 523 |
+      | ^
+> 524 |         {error ? (
+      | ^^^^^^^^
+  525 |           <div className="error-box">
+  526 |             <strong>{error}</strong>
+  527 |             <button onClick={() => ask()}>Retry</button>
+
+Parsing ecmascript source code failed
+
+Import trace:
+  Server Component:
+    ./apps/frontend/src/components/ChatWorkspace.tsx
+    ./apps/frontend/src/app/chat/page.tsx @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1945
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1226
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1226
+[LOG] [Fast Refresh] done in 48ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_0986.u8._.js:1226
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 88ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=F7D8Z3T_NtIKzAhU1r0VO' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=qa0H65AlqcmJLJKPahmJX' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=vMYeB2tLVcE4_kQptUTba' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=vMYeB2tLVcE4_kQptUTba' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 145ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 61ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 60ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 46ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=dYxUQg2-Vr6QrLMu-Xvyk' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=dYxUQg2-Vr6QrLMu-Xvyk' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=eNVk5P1bU4DdXeAUvPNIl' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=eNVk5P1bU4DdXeAUvPNIl' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=eNVk5P1bU4DdXeAUvPNIl' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 132ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=0792sAh0DJw-X54mYxfrO' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[ERROR] WebSocket connection to 'ws://127.0.0.1:3000/_next/webpack-hmr?id=0792sAh0DJw-X54mYxfrO' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_client_026jsr.._.js:13322
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 127ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 65ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 51ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 56ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 61ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 52ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 50ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [Fast Refresh] done in 218ms @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+[LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/0_4d_next_dist_05jslvx._.js:2477
+Error: ./apps/frontend/src/components/ChatWorkspace.tsx:522:18
+Expected '</', got 'jsx text'
+  520 |             {status}
+  521 |           </div>
+> 522 |         </header>
+      |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 523 |
+      | ^
+> 524 |         {error ? (
+      | ^^^^^^^^
+  525 |           <div className="error-box">
+  526 |             <strong>{error}</strong>
+  527 |             <button onClick={() => ask()}>Retry</button>
+
+Parsing ecmascript source code failed
+
+Import trace:
+  Server Component:
+    ./apps/frontend/src/components/ChatWorkspace.tsx
+    ./apps/frontend/src/app/chat/page.tsx
+
+
+    at <unknown> (Error: ./apps/frontend/src/components/ChatWorkspace.tsx:522:18)
+    at Object.getCompilationErrors (file:///Users/gowthamram/PycharmProjects/CognizInterview/node_modules/.pnpm/next@16.2.5_@babel+core@7.29.0_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/hot-reloader-turbopack.js:1186:59)
+    at DevBundlerService.getCompilationError (file:///Users/gowthamram/PycharmProjects/CognizInterview/node_modules/.pnpm/next@16.2.5_@babel+core@7.29.0_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/lib/dev-bundler-service.js:44:55)
+    at DevServer.getCompilationError (file:///Users/gowthamram/PycharmProjects/CognizInterview/node_modules/.pnpm/next@16.2.5_@babel+core@7.29.0_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:720:42)
+    at DevServer.findPageComponents (file:///Users/gowthamram/PycharmProjects/CognizInterview/node_modules/.pnpm/next@16.2.5_@babel+core@7.29.0_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/dev/next-dev-server.js:690:43)
+    at async DevServer.renderErrorToResponseImpl (file:///Users/gowthamram/PycharmProjects/CognizInterview/node_modules/.pnpm/next@16.2.5_@babel+core@7.29.0_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/next/dist/server/base-server.js:1753:26)
