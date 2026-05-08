@@ -2,7 +2,7 @@
 
 A production-minded Graph RAG chatbot that answers questions about uploaded PDFs with citations, ontology graphs, and explainable traces.
 
-Built by Gowtham Ram M for the Cognizant interview process.
+Built by Gowtham Ram M for the interview process.
 
 ---
 
@@ -434,4 +434,4 @@ Then keep `STORE_BACKEND=sql`, `GRAPH_STORE_BACKEND=neo4j`, and `DATABASE_URL=po
 
 ## License
 
-Built for the Cognizant interview process by Gowtham Ram M.
+
