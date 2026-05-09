@@ -39,6 +39,7 @@ def test_sql_repository_persists_documents_skills_and_traces(
     repository.clear_all()
 
     monkeypatch.setenv("STORE_BACKEND", "sql")
+    monkeypatch.setenv("GRAPH_STORE_BACKEND", "sql")
     monkeypatch.setenv("DATABASE_URL", database_url)
     monkeypatch.setenv("RERANK_PROVIDER", "local")
     monkeypatch.setenv("LLM_ANSWER_ENABLED", "false")

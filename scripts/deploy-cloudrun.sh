@@ -26,6 +26,7 @@ RUN_SERVICE_ACCOUNT="${RUN_SERVICE_ACCOUNT:-${PROJECT_NUMBER}-compute@developer.
 DATABASE_URL_FOR_CLOUD_RUN="${DATABASE_URL_FOR_CLOUD_RUN:-${DATABASE_URL_CLOUD_RUN:?DATABASE_URL_CLOUD_RUN is required in .env}}"
 NEXT_PUBLIC_DEMO_API_KEY_FOR_BUILD="${NEXT_PUBLIC_DEMO_API_KEY:-${API_AUTH_KEY:?API_AUTH_KEY is required in .env}}"
 GEMINI_API_KEY_VALUE="${GEMINI_API_KEY:-${gemini_api_key:-}}"
+CLOUD_RUN_GRAPH_STORE_BACKEND="${CLOUD_RUN_GRAPH_STORE_BACKEND:-sql}"
 
 TAG="${TAG:-$(date +%Y%m%d%H%M%S)}"
 BACKEND_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/backend:${TAG}"
@@ -44,7 +45,7 @@ write_backend_env() {
   cat >"${output}" <<EOF
 APP_ENV: "cloud"
 STORE_BACKEND: "${STORE_BACKEND:-sql}"
-GRAPH_STORE_BACKEND: "${GRAPH_STORE_BACKEND:-neo4j}"
+GRAPH_STORE_BACKEND: "${CLOUD_RUN_GRAPH_STORE_BACKEND}"
 CORS_ALLOWED_ORIGINS: "${cors_origin}"
 DATABASE_URL: "${DATABASE_URL_FOR_CLOUD_RUN}"
 NEO4J_URI: "${NEO4J_URI:?NEO4J_URI is required in .env}"
@@ -204,7 +205,9 @@ gcloud run deploy "${FRONTEND_SERVICE}" \
   --max-instances 2
 
 FRONTEND_URL="$(gcloud run services describe "${FRONTEND_SERVICE}" --region "${REGION}" --format 'value(status.url)')"
-write_backend_env "${BACKEND_ENV_FINAL}" "${FRONTEND_URL}"
+FRONTEND_REGIONAL_URL="https://${FRONTEND_SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app"
+FRONTEND_CORS_ORIGINS="${FRONTEND_URL},${FRONTEND_REGIONAL_URL}"
+write_backend_env "${BACKEND_ENV_FINAL}" "${FRONTEND_CORS_ORIGINS}"
 deploy_backend "${BACKEND_ENV_FINAL}"
 
 cat <<EOF

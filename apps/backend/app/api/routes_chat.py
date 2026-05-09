@@ -6,16 +6,16 @@ from sse_starlette.sse import EventSourceResponse
 from app.core.auth import require_api_key
 from app.models.schemas import ChatRequest
 from app.rag.answerer import stream_answer_with_llm
-from app.rag.model_policy import router_profile
 from app.rag.prompts import build_answer_prompt
+from app.rag.router import classify_route
 from app.services.chat import (
     answer_chat,
     apply_skill_if_needed,
     format_ontology_answer,
+    merge_numeric_dicts,
     persist_graph_rag_trace,
     persist_trace,
     prepare_graph_rag_answer,
-    route_message,
     skill_contract_text,
 )
 from app.services.ingestion import get_ontology
@@ -44,7 +44,9 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
             yield {"event": "progress", "data": "hydrating"}
             hydrate_store()
             message = request.message.strip()
-            route = route_message(message)
+            yield {"event": "progress", "data": "routing"}
+            router_decision = classify_route(message)
+            route = router_decision.route
             yield {"event": "route", "data": route}
 
             if route == "greeting":
@@ -52,7 +54,6 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
                     "Hello. Upload or select a PDF document, then ask "
                     "document-grounded questions."
                 )
-                router = router_profile()
                 for delta in chunk_text(answer, 18):
                     yield {"event": "answer_delta", "data": delta}
                 trace = persist_trace(
@@ -62,24 +63,56 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
                     evidence=[],
                     graph_paths=[],
                     answer=answer,
-                    prompts=[
-                        {
-                            "purpose": "router",
-                            "version": router.prompt_version,
-                            "route": route,
-                            "deterministic": True,
-                        }
-                    ],
-                    model_calls=[
-                        {
-                            "purpose": router.purpose,
-                            "model": router.model,
-                            "reasoning_effort": router.reasoning_effort,
-                            "thinking": router.thinking,
-                            "status": "deterministic",
-                        }
-                    ],
-                    usage={"prompt_tokens_estimated": 0},
+                    prompts=[router_decision.prompt_trace],
+                    model_calls=[router_decision.model_call],
+                    usage=router_decision.usage,
+                    timings=router_decision.timings,
+                )
+                yield {"event": "trace", "data": trace.trace_id}
+                yield {"event": "done", "data": "ok"}
+                return
+
+            if route == "skill_management":
+                answer = (
+                    "Use the Skills panel to create or upload a sanitized JSON skill, then "
+                    "select it before asking a document question."
+                )
+                for delta in chunk_text(answer, 18):
+                    yield {"event": "answer_delta", "data": delta}
+                trace = persist_trace(
+                    route=route,
+                    request=request,
+                    retrieval=[],
+                    evidence=[],
+                    graph_paths=[],
+                    answer=answer,
+                    prompts=[router_decision.prompt_trace],
+                    model_calls=[router_decision.model_call],
+                    usage=router_decision.usage,
+                    timings=router_decision.timings,
+                )
+                yield {"event": "trace", "data": trace.trace_id}
+                yield {"event": "done", "data": "ok"}
+                return
+
+            if route == "out_of_scope":
+                answer = (
+                    "I can answer questions about the selected PDF, its ontology, or response "
+                    "skills."
+                )
+                for delta in chunk_text(answer, 18):
+                    yield {"event": "answer_delta", "data": delta}
+                trace = persist_trace(
+                    route=route,
+                    request=request,
+                    retrieval=[],
+                    evidence=[],
+                    graph_paths=[],
+                    answer=answer,
+                    prompts=[router_decision.prompt_trace],
+                    model_calls=[router_decision.model_call],
+                    usage=router_decision.usage,
+                    timings=router_decision.timings,
                 )
                 yield {"event": "trace", "data": trace.trace_id}
                 yield {"event": "done", "data": "ok"}
@@ -105,6 +138,7 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
                     graph_paths=[],
                     answer=answer,
                     prompts=[
+                        router_decision.prompt_trace,
                         {
                             "purpose": "ontology",
                             "version": "ontology-answer-v1.0",
@@ -112,6 +146,7 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
                         }
                     ],
                     model_calls=[
+                        router_decision.model_call,
                         {
                             "purpose": "ontology",
                             "model": "deterministic",
@@ -120,7 +155,8 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
                             "status": "deterministic",
                         }
                     ],
-                    usage={"prompt_tokens_estimated": 0},
+                    usage=router_decision.usage,
+                    timings=router_decision.timings,
                 )
                 yield {"event": "trace", "data": trace.trace_id}
                 yield {"event": "done", "data": "ok"}
@@ -170,13 +206,17 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
                 graph_paths,
                 final_answer,
                 answer_result,
+                router_decision,
             )
             yield {
                 "event": "metrics",
                 "data": json.dumps(
                     {
-                        "usage": answer_result.usage,
-                        "timings": answer_result.timings,
+                        "usage": merge_numeric_dicts(router_decision.usage, answer_result.usage),
+                        "timings": merge_numeric_dicts(
+                            router_decision.timings,
+                            answer_result.timings,
+                        ),
                         "model_call": answer_result.model_call,
                     }
                 ),

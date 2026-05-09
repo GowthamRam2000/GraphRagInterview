@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     greeting_model: str = "gpt-5.4-mini"
     llm_answer_enabled: bool = True
     router_reasoning_effort: str = "none"
+    router_confidence_threshold: float = 0.72
     answer_reasoning_effort: str = "low"
     extractor_reasoning_effort: str = "low"
     prompt_cache_namespace: str = "cognizinterview-graphrag-v1"

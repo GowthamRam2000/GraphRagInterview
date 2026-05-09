@@ -18,12 +18,13 @@ def test_answer_prompt_has_cache_key_and_evidence_boundaries() -> None:
         graph_paths=[["Secure AI", "RELATED_TO", "Integrity"]],
     )
 
-    assert prompt.version == "rag-answer-v1.1"
+    assert prompt.version == "rag-answer-v1.2"
     assert prompt.cache_key.startswith("cognizinterview-")
-    assert "rag-answer-v1-1" in prompt.cache_key
+    assert "rag-answer-v1-2" in prompt.cache_key
     assert len(prompt.cache_key) <= 64
     assert "[Evidence 1 | page 4 | id ev_1]" in prompt.user
-    assert "Every factual claim must be supported by page citations" in prompt.system
+    assert "Attach page citations like [p. 8] to every factual claim" in prompt.system
+    assert "Response contract for GPT-5.4 mini" in prompt.developer
     assert prompt.token_estimate > 0
 
 

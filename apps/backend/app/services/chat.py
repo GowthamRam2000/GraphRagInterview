@@ -8,8 +8,8 @@ from uuid import uuid4
 from app.core.config import get_settings
 from app.models.schemas import ChatRequest, ChatResponse, Citation, SkillDefinition
 from app.rag.answerer import AnswerResult, generate_answer_with_llm
-from app.rag.model_policy import router_profile
 from app.rag.prompts import build_answer_prompt
+from app.rag.router import RouteDecision, classify_route, fallback_route_message
 from app.services.embeddings import cosine_similarity, embed_query
 from app.services.ingestion import get_ontology
 from app.services.reranking import RerankInput, rerank_records
@@ -22,8 +22,6 @@ from app.services.store import (
     hydrate_store,
     persist_trace_state,
 )
-
-GREETINGS = {"hi", "hello", "hey", "good morning", "good afternoon", "good evening"}
 
 
 @dataclass
@@ -41,10 +39,10 @@ class RetrievalCandidate:
 def answer_chat(request: ChatRequest) -> ChatResponse | None:
     hydrate_store()
     message = request.message.strip()
-    route = route_message(message)
+    router_decision = classify_route(message)
+    route = router_decision.route
     if route == "greeting":
         answer = "Hello. Upload or select a PDF document, then ask document-grounded questions."
-        router = router_profile()
         trace = persist_trace(
             route=route,
             request=request,
@@ -52,24 +50,57 @@ def answer_chat(request: ChatRequest) -> ChatResponse | None:
             evidence=[],
             graph_paths=[],
             answer=answer,
-            prompts=[
-                {
-                    "purpose": "router",
-                    "version": router.prompt_version,
-                    "route": route,
-                    "deterministic": True,
-                }
-            ],
-            model_calls=[
-                {
-                    "purpose": router.purpose,
-                    "model": router.model,
-                    "reasoning_effort": router.reasoning_effort,
-                    "thinking": router.thinking,
-                    "status": "deterministic",
-                }
-            ],
-            usage={"prompt_tokens_estimated": 0},
+            prompts=[router_decision.prompt_trace],
+            model_calls=[router_decision.model_call],
+            usage=router_decision.usage,
+            timings=router_decision.timings,
+        )
+        return ChatResponse(
+            answer=answer,
+            route=route,
+            citations=[],
+            graph_paths=[],
+            trace_id=trace.trace_id,
+        )
+
+    if route == "skill_management":
+        answer = (
+            "Use the Skills panel to create or upload a sanitized JSON skill, then select it "
+            "before asking a document question."
+        )
+        trace = persist_trace(
+            route=route,
+            request=request,
+            retrieval=[],
+            evidence=[],
+            graph_paths=[],
+            answer=answer,
+            prompts=[router_decision.prompt_trace],
+            model_calls=[router_decision.model_call],
+            usage=router_decision.usage,
+            timings=router_decision.timings,
+        )
+        return ChatResponse(
+            answer=answer,
+            route=route,
+            citations=[],
+            graph_paths=[],
+            trace_id=trace.trace_id,
+        )
+
+    if route == "out_of_scope":
+        answer = "I can answer questions about the selected PDF, its ontology, or response skills."
+        trace = persist_trace(
+            route=route,
+            request=request,
+            retrieval=[],
+            evidence=[],
+            graph_paths=[],
+            answer=answer,
+            prompts=[router_decision.prompt_trace],
+            model_calls=[router_decision.model_call],
+            usage=router_decision.usage,
+            timings=router_decision.timings,
         )
         return ChatResponse(
             answer=answer,
@@ -95,6 +126,7 @@ def answer_chat(request: ChatRequest) -> ChatResponse | None:
             graph_paths=[],
             answer=answer,
             prompts=[
+                router_decision.prompt_trace,
                 {
                     "purpose": "ontology",
                     "version": "ontology-answer-v1.0",
@@ -102,6 +134,7 @@ def answer_chat(request: ChatRequest) -> ChatResponse | None:
                 }
             ],
             model_calls=[
+                router_decision.model_call,
                 {
                     "purpose": "ontology",
                     "model": get_settings().answer_model,
@@ -110,7 +143,8 @@ def answer_chat(request: ChatRequest) -> ChatResponse | None:
                     "status": "deterministic",
                 }
             ],
-            usage={"prompt_tokens_estimated": 0},
+            usage=router_decision.usage,
+            timings=router_decision.timings,
         )
         return ChatResponse(
             answer=answer,
@@ -133,7 +167,15 @@ def answer_chat(request: ChatRequest) -> ChatResponse | None:
     )
     answer_result = generate_answer_with_llm(answer_prompt, fallback_answer)
     answer = apply_skill_if_needed(request, answer_result.answer, skill, citations)
-    trace = persist_graph_rag_trace(request, candidates, hits, graph_paths, answer, answer_result)
+    trace = persist_graph_rag_trace(
+        request,
+        candidates,
+        hits,
+        graph_paths,
+        answer,
+        answer_result,
+        router_decision,
+    )
     return ChatResponse(
         answer=answer,
         route="graph_rag",
@@ -224,7 +266,17 @@ def persist_graph_rag_trace(
     graph_paths: list[list[str]],
     answer: str,
     answer_result: AnswerResult,
+    router_decision: RouteDecision | None = None,
 ) -> TraceRecord:
+    prompts = [answer_result.prompt_trace]
+    model_calls = [answer_result.model_call]
+    usage = answer_result.usage
+    timings = answer_result.timings
+    if router_decision is not None:
+        prompts = [router_decision.prompt_trace, *prompts]
+        model_calls = [router_decision.model_call, *model_calls]
+        usage = merge_numeric_dicts(router_decision.usage, answer_result.usage)
+        timings = merge_numeric_dicts(router_decision.timings, answer_result.timings)
     return persist_trace(
         route="graph_rag",
         request=request,
@@ -232,24 +284,26 @@ def persist_graph_rag_trace(
         evidence=evidence_payload(hits),
         graph_paths=graph_paths,
         answer=answer,
-        prompts=[answer_result.prompt_trace],
-        model_calls=[answer_result.model_call],
-        usage=answer_result.usage,
-        timings=answer_result.timings,
+        prompts=prompts,
+        model_calls=model_calls,
+        usage=usage,
+        timings=timings,
         cache=answer_result.cache,
     )
 
 
 def route_message(message: str) -> str:
-    normalized = " ".join(message.lower().strip(" !?.").split())
-    if normalized in GREETINGS:
-        return "greeting"
-    if any(
-        token in normalized
-        for token in ("ontology", "domain object", "domain objects", "schema")
-    ):
-        return "ontology"
-    return "graph_rag"
+    return fallback_route_message(message)
+
+
+def merge_numeric_dicts(left: dict, right: dict) -> dict:
+    merged = dict(left)
+    for key, value in right.items():
+        if isinstance(value, (int, float)) and isinstance(merged.get(key), (int, float)):
+            merged[key] += value
+        else:
+            merged[key] = value
+    return merged
 
 
 def retrieve_evidence(document_id: str, message: str, limit: int = 5) -> list[EvidenceRecord]:

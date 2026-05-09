@@ -18,7 +18,9 @@ AUTH = {"x-api-key": API_KEY}
 @pytest.fixture(autouse=True)
 def clean_store(monkeypatch) -> Iterator[None]:
     monkeypatch.setenv("GEMINI_API_KEY", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.setenv("STORE_BACKEND", "memory")
+    monkeypatch.setenv("GRAPH_STORE_BACKEND", "memory")
     monkeypatch.setenv("RERANK_PROVIDER", "local")
     monkeypatch.setenv("LLM_ANSWER_ENABLED", "false")
     get_settings.cache_clear()
@@ -105,7 +107,9 @@ def test_greeting_routes_without_retrieval() -> None:
     trace = client.get(f"/v1/traces/{body['trace_id']}", headers=AUTH)
     assert trace.status_code == 200
     assert trace.json()["retrieval"] == []
-    assert trace.json()["model_calls"][0]["status"] == "deterministic"
+    assert trace.json()["model_calls"][0]["purpose"] == "router"
+    assert trace.json()["model_calls"][0]["model"] == "gpt-5.4-mini"
+    assert trace.json()["model_calls"][0]["status"] == "fallback_disabled"
 
 
 def test_skills_are_validated_previewed_and_applied_to_chat() -> None:

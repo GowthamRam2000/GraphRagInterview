@@ -20,7 +20,7 @@ def router_profile() -> ModelProfile:
         purpose="router",
         model=settings.router_model,
         reasoning_effort=settings.router_reasoning_effort,
-        prompt_version="router-v1.0",
+        prompt_version="router-v1.1",
         thinking=settings.router_reasoning_effort != "none",
     )
 
@@ -31,7 +31,7 @@ def answer_profile() -> ModelProfile:
         purpose="answer",
         model=settings.answer_model,
         reasoning_effort=settings.answer_reasoning_effort,
-        prompt_version="rag-answer-v1.1",
+        prompt_version="rag-answer-v1.2",
         thinking=settings.answer_reasoning_effort != "none",
     )
 

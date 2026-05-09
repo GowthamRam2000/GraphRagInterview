@@ -103,6 +103,12 @@ async def check_gcs(settings: Settings) -> SmokeResult:
 
 
 async def check_neo4j(settings: Settings) -> SmokeResult:
+    if settings.graph_store_backend.lower() != "neo4j":
+        return SmokeResult(
+            name="neo4j",
+            ok=True,
+            detail=f"skipped; GRAPH_STORE_BACKEND={settings.graph_store_backend}",
+        )
     try:
         from neo4j import GraphDatabase
 
