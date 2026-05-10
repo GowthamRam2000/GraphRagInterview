@@ -22,7 +22,7 @@ def test_answer_prompt_has_cache_key_and_evidence_boundaries() -> None:
     assert prompt.cache_key.startswith("cognizinterview-")
     assert "rag-answer-v1-2" in prompt.cache_key
     assert len(prompt.cache_key) <= 64
-    assert "[Evidence 1 | page 4 | id ev_1]" in prompt.user
+    assert "[Evidence 1 | type text | page 4 | id ev_1 | artifact none]" in prompt.user
     assert "Attach page citations like [p. 8] to every factual claim" in prompt.system
     assert "Response contract for GPT-5.4 mini" in prompt.developer
     assert prompt.token_estimate > 0

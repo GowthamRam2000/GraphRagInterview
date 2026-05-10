@@ -42,7 +42,10 @@ def answer_chat(request: ChatRequest) -> ChatResponse | None:
     router_decision = classify_route(message)
     route = router_decision.route
     if route == "greeting":
-        answer = "Hello. Upload or select a PDF document, then ask document-grounded questions."
+        answer = (
+            "Hello. I can help analyze the selected PDF, explain its ontology, or answer "
+            "grounded questions with citations."
+        )
         trace = persist_trace(
             route=route,
             request=request,
@@ -89,7 +92,16 @@ def answer_chat(request: ChatRequest) -> ChatResponse | None:
         )
 
     if route == "out_of_scope":
-        answer = "I can answer questions about the selected PDF, its ontology, or response skills."
+        document = STORE.documents.get(request.document_id or "")
+        target = (
+            f"the selected document, {document.title or document.filename}"
+            if document
+            else "a selected PDF"
+        )
+        answer = (
+            f"I am focused on {target}. Ask me about its content, figures, tables, ontology, "
+            "or response skills and I will answer with traceable evidence."
+        )
         trace = persist_trace(
             route=route,
             request=request,
@@ -218,6 +230,8 @@ def retrieval_payload(candidates: list[RetrievalCandidate]) -> list[dict]:
             "evidence_id": candidate.evidence.evidence_id,
             "page_number": candidate.evidence.page_number,
             "entities": candidate.evidence.entities,
+            "evidence_type": candidate.evidence.evidence_type,
+            "artifact_uri": candidate.evidence.artifact_uri,
             "semantic_score": candidate.semantic_score,
             "lexical_score": candidate.lexical_score,
             "combined_score": candidate.combined_score,
@@ -239,6 +253,10 @@ def evidence_payload(hits: list[EvidenceRecord]) -> list[dict]:
             "text": hit.text,
             "entities": hit.entities,
             "embedding_dimension": len(hit.embedding),
+            "evidence_type": hit.evidence_type,
+            "artifact_uri": hit.artifact_uri,
+            "content_summary": hit.content_summary,
+            "metadata": hit.metadata,
         }
         for hit in hits
     ]
@@ -523,7 +541,7 @@ def compose_answer(message: str, hits: list[EvidenceRecord]) -> str:
     query_terms = meaningful_terms(message)
     excerpts = [best_excerpt(hit.text, query_terms) for hit in hits[:3]]
     evidence_lines = [
-        f"- Page {hit.page_number}: {excerpt}"
+        f"- Page {hit.page_number} ({hit.evidence_type}): {excerpt}"
         for hit, excerpt in zip(hits[:3], excerpts, strict=False)
     ]
     return (

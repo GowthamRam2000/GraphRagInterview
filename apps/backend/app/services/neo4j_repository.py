@@ -65,6 +65,8 @@ def _replace_document_graph(tx, document_payload: dict, graph_payload: dict) -> 
     _persist_pages(tx, document_id, document_payload.get("pages", []))
     _persist_entities(tx, document_id, graph_payload.get("entities", []))
     _persist_evidence(tx, document_id, graph_payload.get("evidence", []))
+    _persist_tables(tx, document_id, graph_payload.get("tables", []))
+    _persist_images(tx, document_id, graph_payload.get("images", []))
     _persist_relationships(tx, graph_payload.get("relationships", []))
 
 
@@ -116,7 +118,10 @@ def _persist_evidence(tx, document_id: str, evidence_items: Iterable[dict]) -> N
             SET ev.document_id = $document_id,
                 ev.page_number = $page_number,
                 ev.text = $text,
-                ev.entities = $entities
+                ev.entities = $entities,
+                ev.evidence_type = $evidence_type,
+                ev.artifact_uri = $artifact_uri,
+                ev.content_summary = $content_summary
             MERGE (p)-[:HAS_EVIDENCE]->(ev)
             """,
             document_id=document_id,
@@ -124,6 +129,9 @@ def _persist_evidence(tx, document_id: str, evidence_items: Iterable[dict]) -> N
             evidence_id=evidence["evidence_id"],
             text=evidence["text"],
             entities=evidence.get("entities", []),
+            evidence_type=evidence.get("evidence_type", "text"),
+            artifact_uri=evidence.get("artifact_uri"),
+            content_summary=evidence.get("content_summary"),
         )
         for entity_name in evidence.get("entities", []):
             tx.run(
@@ -136,6 +144,50 @@ def _persist_evidence(tx, document_id: str, evidence_items: Iterable[dict]) -> N
                 evidence_id=evidence["evidence_id"],
                 entity_name=entity_name,
             )
+
+
+def _persist_tables(tx, document_id: str, tables: Iterable[dict]) -> None:
+    for table in tables:
+        tx.run(
+            """
+            MATCH (p:Page {document_id: $document_id, page_number: $page_number})
+            MERGE (t:Table {table_id: $table_id})
+            SET t.document_id = $document_id,
+                t.summary = $summary,
+                t.artifact_uri = $artifact_uri,
+                t.evidence_id = $evidence_id
+            MERGE (p)-[:HAS_TABLE]->(t)
+            """,
+            document_id=document_id,
+            page_number=table.get("page_number"),
+            table_id=table.get("table_id"),
+            summary=table.get("summary"),
+            artifact_uri=table.get("artifact_uri"),
+            evidence_id=table.get("evidence_id"),
+        )
+
+
+def _persist_images(tx, document_id: str, images: Iterable[dict]) -> None:
+    for image in images:
+        tx.run(
+            """
+            MATCH (p:Page {document_id: $document_id, page_number: $page_number})
+            MERGE (i:Image {image_id: $image_id})
+            SET i.document_id = $document_id,
+                i.caption = $caption,
+                i.source_ref = $source_ref,
+                i.artifact_uri = $artifact_uri,
+                i.evidence_id = $evidence_id
+            MERGE (p)-[:HAS_IMAGE]->(i)
+            """,
+            document_id=document_id,
+            page_number=image.get("page_number"),
+            image_id=image.get("image_id"),
+            caption=image.get("caption"),
+            source_ref=image.get("source_ref"),
+            artifact_uri=image.get("artifact_uri"),
+            evidence_id=image.get("evidence_id"),
+        )
 
 
 def _persist_relationships(tx, relationships: Iterable[dict]) -> None:

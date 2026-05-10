@@ -27,6 +27,19 @@ ALLOWED_ROUTES: set[str] = {
 }
 
 GREETINGS = {"hi", "hello", "hey", "good morning", "good afternoon", "good evening"}
+OFF_TOPIC_KEYWORDS = {
+    "weather",
+    "stock price",
+    "sports score",
+    "movie recommendation",
+    "restaurant",
+    "flight",
+    "hotel",
+    "recipe",
+    "cricket score",
+    "football score",
+    "news today",
+}
 
 
 @dataclass(frozen=True)
@@ -101,6 +114,10 @@ def classify_route(message: str) -> RouteDecision:
         route = sanitize_route(payload.get("route"))
         confidence = sanitize_confidence(payload.get("confidence"))
         reason = str(payload.get("reason") or "Mini-model route classification.")[:240]
+        if route == "ontology" and not explicit_ontology_intent(message):
+            route = "graph_rag"
+            reason = "Ontology route overridden for document-grounded question."
+            model_call["override"] = "ontology_to_graph_rag"
         model_call["status"] = "ok"
         model_call["response_id"] = getattr(response, "id", None)
         model_call["confidence"] = confidence
@@ -157,6 +174,8 @@ def fallback_route_message(message: str) -> RouteName:
     normalized = " ".join(message.lower().strip(" !?.").split())
     if normalized in GREETINGS:
         return "greeting"
+    if any(keyword in normalized for keyword in OFF_TOPIC_KEYWORDS):
+        return "out_of_scope"
     if any(
         token in normalized
         for token in ("ontology", "domain object", "domain objects", "schema")
@@ -165,6 +184,22 @@ def fallback_route_message(message: str) -> RouteName:
     if any(token in normalized for token in ("skill", "format", "json skill")):
         return "skill_management"
     return "graph_rag"
+
+
+def explicit_ontology_intent(message: str) -> bool:
+    normalized = " ".join(message.lower().strip(" !?.").split())
+    ontology_terms = (
+        "ontology",
+        "domain object",
+        "domain objects",
+        "entities",
+        "relationships",
+        "graph structure",
+        "schema",
+        "object type",
+        "object types",
+    )
+    return any(term in normalized for term in ontology_terms)
 
 
 def parse_router_payload(text: str) -> dict:

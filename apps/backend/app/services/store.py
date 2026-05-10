@@ -15,6 +15,11 @@ class EvidenceRecord:
     text: str
     entities: list[str]
     embedding: list[float] = field(default_factory=list)
+    evidence_type: str = "text"
+    artifact_uri: str | None = None
+    content_summary: str | None = None
+    metadata: dict = field(default_factory=dict)
+    confidence: float = 1.0
 
 
 @dataclass
@@ -25,6 +30,8 @@ class EntityRecord:
     label: str = "Entity"
     page_numbers: set[int] = field(default_factory=set)
     evidence_ids: set[str] = field(default_factory=set)
+    confidence: float = 1.0
+    properties: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -33,6 +40,30 @@ class RelationshipRecord:
     relationship_type: str
     target_entity_id: str
     evidence_id: str
+    confidence: float = 1.0
+
+
+@dataclass
+class TableRecord:
+    table_id: str
+    page_number: int
+    markdown: str
+    summary: str
+    artifact_uri: str | None = None
+    evidence_id: str | None = None
+    metadata: dict = field(default_factory=dict)
+
+
+@dataclass
+class ImageRecord:
+    image_id: str
+    page_number: int
+    caption: str
+    source_ref: str | None = None
+    artifact_uri: str | None = None
+    evidence_id: str | None = None
+    image_embedding: list[float] = field(default_factory=list)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -42,6 +73,10 @@ class PageRecord:
     status: str = "completed"
     entity_ids: list[str] = field(default_factory=list)
     evidence_ids: list[str] = field(default_factory=list)
+    tables: list[TableRecord] = field(default_factory=list)
+    images: list[ImageRecord] = field(default_factory=list)
+    layout_blocks: list[dict] = field(default_factory=list)
+    artifact_uris: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -52,6 +87,11 @@ class DocumentRecord:
     status: str = "created"
     upload_url: str = ""
     gcs_uri: str = ""
+    raw_pdf_gcs_uri: str = ""
+    artifact_gcs_uris: list[str] = field(default_factory=list)
+    parser_metadata: dict = field(default_factory=dict)
+    legacy_text_only: bool = False
+    migration_status: str | None = None
     pages: dict[int, PageRecord] = field(default_factory=dict)
     created_at: float = field(default_factory=time)
 
@@ -190,6 +230,11 @@ def document_to_payload(document: DocumentRecord) -> dict:
         "status": document.status,
         "upload_url": document.upload_url,
         "gcs_uri": document.gcs_uri,
+        "raw_pdf_gcs_uri": document.raw_pdf_gcs_uri,
+        "artifact_gcs_uris": document.artifact_gcs_uris,
+        "parser_metadata": document.parser_metadata,
+        "legacy_text_only": document.legacy_text_only,
+        "migration_status": document.migration_status,
         "created_at": document.created_at,
         "pages": [
             {
@@ -198,6 +243,10 @@ def document_to_payload(document: DocumentRecord) -> dict:
                 "status": page.status,
                 "entity_ids": page.entity_ids,
                 "evidence_ids": page.evidence_ids,
+                "tables": [table_to_payload(table) for table in page.tables],
+                "images": [image_to_payload(image) for image in page.images],
+                "layout_blocks": page.layout_blocks,
+                "artifact_uris": page.artifact_uris,
             }
             for page in sorted(document.pages.values(), key=lambda item: item.page_number)
         ],
@@ -212,6 +261,11 @@ def document_from_payload(payload: dict) -> DocumentRecord:
         status=payload.get("status", "created"),
         upload_url=payload.get("upload_url", ""),
         gcs_uri=payload.get("gcs_uri", ""),
+        raw_pdf_gcs_uri=payload.get("raw_pdf_gcs_uri") or payload.get("gcs_uri", ""),
+        artifact_gcs_uris=list(payload.get("artifact_gcs_uris", [])),
+        parser_metadata=dict(payload.get("parser_metadata", {})),
+        legacy_text_only=bool(payload.get("legacy_text_only", False)),
+        migration_status=payload.get("migration_status"),
         created_at=payload.get("created_at", time()),
     )
     for page_payload in payload.get("pages", []):
@@ -221,6 +275,10 @@ def document_from_payload(payload: dict) -> DocumentRecord:
             status=page_payload.get("status", "completed"),
             entity_ids=list(page_payload.get("entity_ids", [])),
             evidence_ids=list(page_payload.get("evidence_ids", [])),
+            tables=[table_from_payload(item) for item in page_payload.get("tables", [])],
+            images=[image_from_payload(item) for item in page_payload.get("images", [])],
+            layout_blocks=list(page_payload.get("layout_blocks", [])),
+            artifact_uris=dict(page_payload.get("artifact_uris", {})),
         )
         document.pages[page.page_number] = page
     return document
@@ -247,6 +305,8 @@ def graph_payload_for_document(document_id: str) -> dict:
                 "label": entity.label,
                 "page_numbers": sorted(entity.page_numbers),
                 "evidence_ids": sorted(entity.evidence_ids),
+                "confidence": entity.confidence,
+                "properties": entity.properties,
             }
             for entity in STORE.entities.values()
             if entity.entity_id in entity_ids
@@ -259,6 +319,11 @@ def graph_payload_for_document(document_id: str) -> dict:
                 "text": evidence.text,
                 "entities": evidence.entities,
                 "embedding": evidence.embedding,
+                "evidence_type": evidence.evidence_type,
+                "artifact_uri": evidence.artifact_uri,
+                "content_summary": evidence.content_summary,
+                "metadata": evidence.metadata,
+                "confidence": evidence.confidence,
             }
             for evidence in STORE.evidence.values()
             if evidence.evidence_id in evidence_ids
@@ -269,10 +334,32 @@ def graph_payload_for_document(document_id: str) -> dict:
                 "relationship_type": relationship.relationship_type,
                 "target_entity_id": relationship.target_entity_id,
                 "evidence_id": relationship.evidence_id,
+                "confidence": relationship.confidence,
             }
             for relationship in STORE.relationships
             if relationship.source_entity_id in entity_ids
             or relationship.target_entity_id in entity_ids
+        ],
+        "tables": [
+            table_to_payload(table)
+            for document in STORE.documents.values()
+            if document.document_id == document_id
+            for page in document.pages.values()
+            for table in page.tables
+        ],
+        "images": [
+            image_to_payload(image)
+            for document in STORE.documents.values()
+            if document.document_id == document_id
+            for page in document.pages.values()
+            for image in page.images
+        ],
+        "layout_blocks": [
+            {"page_number": page.page_number, "blocks": page.layout_blocks}
+            for document in STORE.documents.values()
+            if document.document_id == document_id
+            for page in document.pages.values()
+            if page.layout_blocks
         ],
     }
 
@@ -288,6 +375,8 @@ def load_graph_payload(payload: dict) -> None:
             label=entity_payload.get("label", "Entity"),
             page_numbers=set(entity_payload.get("page_numbers", [])),
             evidence_ids=set(entity_payload.get("evidence_ids", [])),
+            confidence=float(entity_payload.get("confidence", 1.0)),
+            properties=dict(entity_payload.get("properties", {})),
         )
         STORE.entities[entity.entity_id] = entity
     for evidence_payload in payload.get("evidence", []):
@@ -298,6 +387,11 @@ def load_graph_payload(payload: dict) -> None:
             text=evidence_payload["text"],
             entities=list(evidence_payload.get("entities", [])),
             embedding=list(evidence_payload.get("embedding", [])),
+            evidence_type=evidence_payload.get("evidence_type", "text"),
+            artifact_uri=evidence_payload.get("artifact_uri"),
+            content_summary=evidence_payload.get("content_summary"),
+            metadata=dict(evidence_payload.get("metadata", {})),
+            confidence=float(evidence_payload.get("confidence", 1.0)),
         )
         STORE.evidence[evidence.evidence_id] = evidence
     for relationship_payload in payload.get("relationships", []):
@@ -344,3 +438,53 @@ def trace_to_payload(trace: TraceRecord) -> dict:
         "cache": trace.cache,
         "created_at": trace.created_at,
     }
+
+
+def table_to_payload(table: TableRecord) -> dict:
+    return {
+        "table_id": table.table_id,
+        "page_number": table.page_number,
+        "markdown": table.markdown,
+        "summary": table.summary,
+        "artifact_uri": table.artifact_uri,
+        "evidence_id": table.evidence_id,
+        "metadata": table.metadata,
+    }
+
+
+def table_from_payload(payload: dict) -> TableRecord:
+    return TableRecord(
+        table_id=payload["table_id"],
+        page_number=payload["page_number"],
+        markdown=payload.get("markdown", ""),
+        summary=payload.get("summary", ""),
+        artifact_uri=payload.get("artifact_uri"),
+        evidence_id=payload.get("evidence_id"),
+        metadata=dict(payload.get("metadata", {})),
+    )
+
+
+def image_to_payload(image: ImageRecord) -> dict:
+    return {
+        "image_id": image.image_id,
+        "page_number": image.page_number,
+        "caption": image.caption,
+        "source_ref": image.source_ref,
+        "artifact_uri": image.artifact_uri,
+        "evidence_id": image.evidence_id,
+        "image_embedding": image.image_embedding,
+        "metadata": image.metadata,
+    }
+
+
+def image_from_payload(payload: dict) -> ImageRecord:
+    return ImageRecord(
+        image_id=payload["image_id"],
+        page_number=payload["page_number"],
+        caption=payload.get("caption", ""),
+        source_ref=payload.get("source_ref"),
+        artifact_uri=payload.get("artifact_uri"),
+        evidence_id=payload.get("evidence_id"),
+        image_embedding=list(payload.get("image_embedding", [])),
+        metadata=dict(payload.get("metadata", {})),
+    )

@@ -82,6 +82,8 @@ class OntologyResponse(BaseModel):
     document_id: str
     object_types: list[OntologyObjectType]
     relationships: list[OntologyRelationship]
+    objects: list[dict] = Field(default_factory=list)
+    relationship_edges: list[dict] = Field(default_factory=list)
 
 
 class Citation(BaseModel):

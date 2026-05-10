@@ -7,7 +7,7 @@ from app.core.config import get_settings
 from app.services.store import EvidenceRecord
 
 PROMPT_VERSION = "rag-answer-v1.2"
-ROUTER_PROMPT_VERSION = "router-v1.1"
+ROUTER_PROMPT_VERSION = "router-v1.2"
 EXTRACTOR_PROMPT_VERSION = "ontology-extractor-v1.0"
 
 ANSWER_SYSTEM_PROMPT = """You are the answer model for a Graph RAG document intelligence demo.
@@ -47,6 +47,10 @@ Allowed routes:
 Decision rules:
 - If the message asks a substantive question and could plausibly refer to the selected PDF,
   choose graph_rag.
+- Choose ontology only when the user explicitly asks for ontology, domain objects, entities,
+  relationships, graph structure, schema, or object types.
+- Do not choose ontology just because a document question mentions categories, subcategories,
+  outcomes, controls, functions, requirements, risks, tables, or figures.
 - If unsure between graph_rag and out_of_scope, choose graph_rag.
 - Use greeting only when no document retrieval is needed.
 - Use confidence from 0 to 1. Use lower confidence when intent is ambiguous.
@@ -78,8 +82,9 @@ def build_answer_prompt(
     skill_contract: str | None = None,
 ) -> PromptBundle:
     evidence_block = "\n".join(
-        f"[Evidence {index} | page {item.page_number} | id {item.evidence_id}]\n"
-        f"{item.text[:900]}"
+        f"[Evidence {index} | type {item.evidence_type} | page {item.page_number} | "
+        f"id {item.evidence_id} | artifact {item.artifact_uri or 'none'}]\n"
+        f"{(item.content_summary or item.text)[:300]}\n{item.text[:900]}"
         for index, item in enumerate(evidence, start=1)
     )
     path_block = "\n".join(" -> ".join(path) for path in graph_paths) or "No graph paths."

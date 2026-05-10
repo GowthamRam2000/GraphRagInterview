@@ -5,6 +5,8 @@
 !.env.example
 *service-account*.json
 *credentials*.json
+gcp.json
+apps/backend/gcp.json
 deploy/cloudrun/backend.env.yaml
 deploy/cloudrun/frontend.env.yaml
 deploy/cloudrun/backend.secrets

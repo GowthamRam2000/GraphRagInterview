@@ -51,8 +51,8 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
 
             if route == "greeting":
                 answer = (
-                    "Hello. Upload or select a PDF document, then ask "
-                    "document-grounded questions."
+                    "Hello. I can help analyze the selected PDF, explain its ontology, "
+                    "or answer grounded questions with citations."
                 )
                 for delta in chunk_text(answer, 18):
                     yield {"event": "answer_delta", "data": delta}
@@ -96,9 +96,15 @@ async def chat_stream(request: ChatRequest) -> EventSourceResponse:
                 return
 
             if route == "out_of_scope":
+                document = STORE.documents.get(request.document_id or "")
+                target = (
+                    f"the selected document, {document.title or document.filename}"
+                    if document
+                    else "a selected PDF"
+                )
                 answer = (
-                    "I can answer questions about the selected PDF, its ontology, or response "
-                    "skills."
+                    f"I am focused on {target}. Ask me about its content, figures, tables, "
+                    "ontology, or response skills and I will answer with traceable evidence."
                 )
                 for delta in chunk_text(answer, 18):
                     yield {"event": "answer_delta", "data": delta}

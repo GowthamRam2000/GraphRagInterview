@@ -21,6 +21,9 @@ def clean_store(monkeypatch) -> Iterator[None]:
     monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.setenv("STORE_BACKEND", "memory")
     monkeypatch.setenv("GRAPH_STORE_BACKEND", "memory")
+    monkeypatch.setenv("GCP_PROJECT_ID", "")
+    monkeypatch.setenv("GCS_BUCKET_ARTIFACTS", "")
+    monkeypatch.setenv("GCS_BUCKET_RAW", "")
     monkeypatch.setenv("RERANK_PROVIDER", "local")
     monkeypatch.setenv("LLM_ANSWER_ENABLED", "false")
     get_settings.cache_clear()
@@ -310,6 +313,63 @@ def test_document_page_ontology_alias_stream_and_trace_list_endpoints() -> None:
     traces = client.get("/v1/traces", headers=AUTH)
     assert traces.status_code == 200
     assert traces.json()
+
+
+def test_multimodal_table_image_metadata_flows_to_chat_and_trace() -> None:
+    client = TestClient(app)
+    document = client.post(
+        "/v1/documents/upload-url",
+        headers=AUTH,
+        json={"filename": "multimodal.pdf", "content_type": "application/pdf"},
+    ).json()
+    document_id = document["document_id"]
+    finalize = client.post(
+        f"/v1/documents/{document_id}/finalize",
+        headers=AUTH,
+        json={
+            "title": "Multimodal Demo",
+            "pages": [
+                (
+                    "Figure 1 shows the AI lifecycle. "
+                    "![AI lifecycle figure](figures/lifecycle.png)\n"
+                    "<table><tr><th>Stage</th><th>Risk</th></tr>"
+                    "<tr><td>Design</td><td>Safety Risk</td></tr></table>"
+                    " Organizations should evaluate context, data, models, outputs, "
+                    "people, and planet across repeated lifecycle reviews. " * 8
+                )
+            ],
+        },
+    )
+    assert finalize.status_code == 200
+    assert finalize.json()["pages"][0]["evidence_count"] > 3
+
+    detail = client.get(f"/v1/documents/{document_id}", headers=AUTH)
+    assert detail.status_code == 200
+    assert detail.json()["legacy_text_only"] is True
+    assert detail.json()["artifact_count"] == 0
+
+    page = client.get(f"/v1/documents/{document_id}/pages/1", headers=AUTH)
+    assert page.status_code == 200
+    assert page.json()["tables"][0]["summary"]
+    assert page.json()["images"][0]["caption"] == "AI lifecycle figure"
+
+    ontology = client.get(f"/v1/documents/{document_id}/ontology", headers=AUTH)
+    assert ontology.status_code == 200
+    labels = {item["label"] for item in ontology.json()["object_types"]}
+    assert {"Table", "Figure"}.issubset(labels)
+
+    chat = client.post(
+        "/v1/chat",
+        headers=AUTH,
+        json={"document_id": document_id, "message": "What does Figure 1 show?"},
+    )
+    assert chat.status_code == 200
+    body = chat.json()
+    assert body["route"] == "graph_rag"
+
+    trace = client.get(f"/v1/traces/{body['trace_id']}", headers=AUTH)
+    assert trace.status_code == 200
+    assert any(item["evidence_type"] == "image" for item in trace.json()["evidence"])
 
 
 def test_vertex_reranker_demotes_non_returned_candidates(monkeypatch) -> None:
